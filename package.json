@@ -1,0 +1,23 @@
+{
+  "name": "memory-parser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "./src/index.ts",
+  "scripts": {
+    "build": "npx tsc",
+    "run": "npx tsc && node ./dist/index.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/matteopolak/memory-parser.git"
+  },
+  "author": "Matteo Polak",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/matteopolak/memory-parser/issues"
+  },
+  "homepage": "https://github.com/matteopolak/memory-parser#readme",
+  "devDependencies": {
+    "@types/node": "^17.0.0"
+  }
+}
