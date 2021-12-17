@@ -11,5 +11,5 @@
 
 ## Usage
 ```console
-node index.js < "memorydump.bin" 1> by_flag.json 2> by_file.json
+> node index.js < "memorydump.bin" 1> by_flag.json 2> by_file.json
 ```
