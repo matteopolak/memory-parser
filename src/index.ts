@@ -1,87 +1,54 @@
 import fs from 'fs';
-import { WINDOWS_REGEX, LINUX_REGEX, CATEGORIES } from './constants';
+import { parseMemoryDump, iterateFiles } from './utils.js';
 
-import type { Category, Flag, FlagEntry, File, FileEntry, Info } from './typings';
+const folder = process.argv[2];
 
-const data = fs.readFileSync(process.argv[2] ?? process.stdin.fd, 'utf8');
-const isWindows = data.includes('HKEY_');
-const regex = isWindows ? WINDOWS_REGEX : LINUX_REGEX;
-const matches = data.matchAll(regex);
+if (folder === undefined) {
+	const { flags, files } = await parseMemoryDump(fs.readFileSync(process.stdin.fd, 'utf8'));
 
-const info: Info = {
-	category: null,
-	flag: null,
-	should_be_present: null,
-	file: null
-};
+	process.stdout.write(JSON.stringify(Object.fromEntries(flags.entries()), null, 2));
+	process.stderr.write(JSON.stringify(Object.fromEntries(files.entries()), null, 2));
 
-const flags = new Map<Flag, FlagEntry>([
-	[null, {
-		files: [],
-		matchers: [],
-		category: null
-	}]
-]);
-
-const files = new Map<File, FileEntry>([
-	[null, {
-		matchers: [],
-		category: null,
-		flag: null
-	}]
-]);
-
-for (const match of matches) {
-	const index = match.findIndex((m, i) => i > 0 && m);
-	const text = match[index] ?? '';
-
-	switch (index) {
-		case 1:
-			const data = { regex: match[1]!, is_required: info.should_be_present };
-
-			flags.get(info.flag).matchers.push(data);
-			files.get(info.file).matchers.push(data);
-
-			break;
-		case 2:
-			if ((isWindows && text.includes('boost')) || text.startsWith('/opt/CyberPatriot'))
-				continue;
-
-			info.file = text;
-
-			flags.get(info.flag).files.push(info.file);
-
-			if (!files.has(info.file)) {
-				files.set(info.file, {
-					matchers: [],
-					category: info.category,
-					flag: info.flag
-				});
-			}
-
-			break;
-		case 3:
-			const isFlag = CATEGORIES.has(text as Category);
-
-			info[isFlag ? 'flag' : 'category'] = text as Category;
-
-			if (isFlag && !flags.has(text)) {
-				flags.set(text, {
-					files: [],
-					matchers: [],
-					category: info.category
-				});
-			}
-
-			break;
-		case 4:
-			info.should_be_present = true;
-		case 5:
-			info.should_be_present = false;
-		default:
-			continue;
-	}
+	process.exit(0);
 }
 
-process.stdout.write(JSON.stringify(Object.fromEntries(flags.entries()), null, 2));
-process.stderr.write(JSON.stringify(Object.fromEntries(files.entries()), null, 2));
+const files = iterateFiles(folder);
+const out = `${folder}_out`;
+
+await fs.promises.mkdir(out)
+	.catch(() => {});
+
+let i = 0;
+
+const top = {
+	files: -1,
+	files_count: -1,
+	flags: -1,
+	flags_count: -1
+};
+
+for await (const data of files) {
+	const { flags, files } = await parseMemoryDump(data);
+
+	await Promise.all([
+		fs.promises.writeFile(`${out}/flags_${++i}`, JSON.stringify(Object.fromEntries(flags.entries()))),
+		fs.promises.writeFile(`${out}/files_${i}`, JSON.stringify(Object.fromEntries(files.entries())))
+	]);
+
+	if (flags.size > top.flags) {
+		top.flags = i;
+		top.flags_count = flags.size;
+	}
+
+	if (files.size > top.files) {
+		top.files = i;
+		top.files_count = files.size;
+	}
+
+	process.stdout.write(`  Done #${i}\r`);
+}
+
+console.log(`
+Most files: ${out}/files_${top.files}
+Most flags: ${out}/flags_${top.flags}
+`);

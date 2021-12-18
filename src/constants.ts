@@ -1,4 +1,4 @@
-import type { Category } from './typings';
+import type { Category } from './typings.js';
 
 // Regular expressions for parsing the memory dump
 export const WINDOWS_REGEX = /(SELECT \*[^\0]+|\\Registry\\[^\0]+)|(?<=\0)(C:\\[-\w\/\\\.\s\(\)]{3,})(?=\0)|(?<=\0\0\0)([A-Z_]{2,})(?=\0\0\0)|(cff9)|(a238)/g;

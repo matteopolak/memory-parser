@@ -13,3 +13,8 @@
 ```console
 > node index.js < "memorydump.bin" 1> by_flag.json 2> by_file.json
 ```
+
+## Generate dump files
+```console
+> procdump.exe -accepteula -n 60 -s 1 -ma <pid>
+```
